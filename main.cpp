@@ -65,7 +65,7 @@ void redistribute(Bucket *buck1, Bucket *buck2, int buck1_id, int buck2_id)
   for (int i = 0; i < buck1->data.size(); i++)
   {
     int hash = hash_key(directory.depth, buck1->data[i]);
-    
+
     if (hash == buck1_id)
       continue;
 
@@ -105,6 +105,21 @@ void assign_dangling_ptrs()
   }
 }
 
+void split_bucket(int hash, int value)
+{
+  int re_hash = hash ^ (1 << directory.depth - 1);
+  int hash1 = min(hash, re_hash);
+  int hash2 = max(hash, re_hash);
+
+  directory.bucket_map[hash1]->data.push_back(value);
+  directory.bucket_map[hash2] = new Bucket(BUCKET_MAXSIZE);
+  directory.bucket_map[hash1]->depth++;
+  directory.bucket_map[hash2]->depth++;
+
+  redistribute(directory.bucket_map[hash1], directory.bucket_map[hash2], hash1, hash2);
+  assign_dangling_ptrs();
+}
+
 void insert_in_bucket(int hash, int value)
 {
   //Bucket is full
@@ -114,48 +129,18 @@ void insert_in_bucket(int hash, int value)
     if (directory.bucket_map[hash]->depth == directory.depth)
     {
       double_dir();
-      
-      int re_hash = hash ^ (1 << directory.depth - 1);
-      int hash1 = min(hash, re_hash);
-      int hash2 = max(hash, re_hash);
-      
-      directory.bucket_map[hash1]->data.push_back(value);
-      directory.bucket_map[hash2] = new Bucket(BUCKET_MAXSIZE);
-      directory.bucket_map[hash1]->depth++;
-      directory.bucket_map[hash2]->depth++;
-      
-      redistribute(directory.bucket_map[hash1], directory.bucket_map[hash2], hash1, hash2);
-      assign_dangling_ptrs();
+
+      split_bucket(hash, value);
     }
     else
     {
-      
-      int re_hash = hash ^ (1 << directory.depth - 1);
-      int hash1 = min(hash, re_hash);
-      int hash2 = max(hash, re_hash);
-      
-      directory.bucket_map[hash1]->data.push_back(value);
-      directory.bucket_map[hash2] = new Bucket(BUCKET_MAXSIZE);
-      directory.bucket_map[hash1]->depth++;
-      directory.bucket_map[hash2]->depth++;
-      
-      redistribute(directory.bucket_map[hash1], directory.bucket_map[hash2], hash1, hash2);
-      assign_dangling_ptrs();
+      split_bucket(hash, value);
     }
   }
   else
   {
     directory.bucket_map[hash]->data.push_back(value);
   }
-}
-
-void insert(int value)
-{
-  int global_depth = directory.depth;
-
-  int hash = hash_key(global_depth, value);
-  
-  insert_in_bucket(hash, value);
 }
 
 void print_directory()
@@ -184,10 +169,19 @@ void print_directory()
   printf("---------------------------------------------\n\n");
 }
 
+void insert(int value)
+{
+  int global_depth = directory.depth;
+
+  int hash = hash_key(global_depth, value);
+
+  insert_in_bucket(hash, value);
+}
+
 int main()
 {
   directory.depth = 1;
-  
+
   int values[] = {16, 4, 6, 22, 24, 10, 31, 7, 9, 20, 26};
   //int values[] = {4, 6, 2, 12, 9, 11, 7, 15, 13, 8, 12};
   int sz = sizeof(values) / sizeof(values[0]);
