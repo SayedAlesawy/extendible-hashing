@@ -178,6 +178,41 @@ void insert(int value)
   insert_in_bucket(hash, value);
 }
 
+int search_element(int value)
+{
+  int block_access = 1;
+  int hash = hash_key(directory.depth, value);
+
+  if(directory.bucket_map.find(hash) == directory.bucket_map.end())
+    return -1;
+
+  if (directory.bucket_map[hash] == NULL)
+  {
+    return -1;
+  }
+
+  for (int i = 0; i < directory.bucket_map[hash]->data.size(); i++)
+  {
+    block_access++;
+    if (directory.bucket_map[hash]->data[i] == value)
+      return block_access;
+  }
+
+  return -1;
+}
+
+void search(int value)
+{
+  int res = search_element(value);
+
+  if (res == -1)
+    printf("%d not found\n", value);
+  else
+    printf("%d is found, blocked_access = %d\n", value, res);
+
+  printf("---------------------------------------------\n\n");
+}
+
 int main()
 {
   directory.depth = 1;
@@ -194,4 +229,9 @@ int main()
     insert(values[i]);
     print_directory();
   }
+
+  search(10);
+  search(9);
+  search(6);
+  search(1025);
 }
